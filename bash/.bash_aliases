@@ -29,10 +29,10 @@ alias la='ls -A'                              # all but . and ..
 alias l='ls -CF'                              #
 
 # Git shortcuts
-alias gitprune="git branch -r --merged 
-                | grep origin 
-                | grep -v '>' 
-                | grep -v master 
-                | xargs -L1 
-                | awk '{sub(/origin\//,\"\");print}'
-                | xargs git push origin --delete"
+alias gitprune="git branch --merged \
+                | grep -v '>' \
+                | grep -v '\*' \
+                | grep -v master \
+                | xargs -L1 \
+                | awk '{sub(/origin\//,\"\");print}' \
+                | xargs git branch -D "
