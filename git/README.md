@@ -4,7 +4,7 @@ Git dotfile. Contains my global configuration, as well as some aliases.
 Run `install.sh` to install.
 
 ```bash
-~/.dotfiles/bash/install.sh
+~/.dotfiles/git/install.sh
 ```
 
 Any files that would be replaced will instead be backed up automatically by the installation script.
@@ -13,5 +13,5 @@ Any files that would be replaced will instead be backed up automatically by the 
 Running `uninstall.sh` deletes the installed dotfiles and restores the backed up files.
 
 ```bash
-~/.dotfiles/bash/uninstall.sh
+~/.dotfiles/git/uninstall.sh
 ```
