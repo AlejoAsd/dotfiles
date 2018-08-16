@@ -1,4 +1,4 @@
-Bash dotfiles. Contains a handy file structure and a few basic, useful aliases.
+Git dotfile. Contains my global configuration, as well as some aliases.
 
 ### Installation
 Run `install.sh` to install.
