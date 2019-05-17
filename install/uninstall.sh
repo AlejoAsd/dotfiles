@@ -1,18 +1,21 @@
-dir=$(dirname "$(readlink -f "$0")")
-cd $dir
+DIR="$(basename $(readlink -f ${0%/*}))"
+FULLPATH="$(readlink -f $(dirname "$0"))"
+cd $FULLPATH
 # Create backup folder if it doesn't exist
-[ -e "$dir/bak" ] || mkdir "$dir/bak"
+[ -e "$FULLPATH/bak" ] || mkdir "$FULLPATH/bak"
 # Include hidden files in results
 shopt -s dotglob
-for file in .[^.]*; do
+# Get all files starting with . in FULLPATH
+for FILE in .[^.]*; do
     # Sanity check in case no files are found
-    [ -e $file ] || continue
+    [ -e $FILE ] || continue
     # Previously installed file not found
-    [ -e ~/$file ] || (echo "Installed file $file not found! Skipping."; continue)
+    [ -e ~/$FILE ] || (echo "Installed file $FILE not found! Skipping."; 
+                       continue)
     # Previously installed file found
-    [ ! -e ~/$file ] || (echo "Installed file $file found! Deleting."; \
-                         rm ~/$file)
+    [ ! -e ~/$FILE ] || (echo "Installed file $FILE found! Deleting."; \
+                         rm ~/$FILE)
     # Backup of installed file exists
-    [ ! -e $dir/bak/$file ] || (echo "Installed file $file backup found! Restoring."; \
-                                mv "$dir/bak/$file" ~)
+    [ ! -e $FULLPATH/bak/$FILE ] || (echo "Installed file $FILE backup found! Restoring."; \
+                                mv "$FULLPATH/bak/$FILE" ~)
 done
