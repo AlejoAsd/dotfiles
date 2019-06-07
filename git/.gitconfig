@@ -16,3 +16,5 @@
 	guitool = meld
 [merge]
 	tool = meld
+[credential]
+        helper = cache --timeout 1800
