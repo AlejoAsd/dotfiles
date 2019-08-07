@@ -93,4 +93,6 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 # Insert Go bin directory into PATH
-PATH=$PATH:/home/asd/go/bin
+if [ -x "$(command -v go)" ]; then
+  PATH=$PATH:/home/asd/go/bin
+fi
