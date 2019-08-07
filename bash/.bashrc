@@ -94,5 +94,5 @@ export NVM_DIR="$HOME/.nvm"
 
 # Insert Go bin directory into PATH
 if [ -x "$(command -v go)" ]; then
-  PATH=$PATH:/home/asd/go/bin
+  PATH=$PATH:$HOME/go/bin
 fi
