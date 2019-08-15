@@ -28,6 +28,11 @@ alias ll='ls -l'                              # long list
 alias la='ls -A'                              # all but . and ..
 alias l='ls -CF'                              #
 
+# kubectl specific configs
+alias ki='kubectl --kubeconfig=$HOME/.kube/config_integration'
+alias ks='kubectl --kubeconfig=$HOME/.kube/config_staging'
+alias kp='kubectl --kubeconfig=$HOME/.kube/config_production'
+
 # Git shortcuts
 alias gitprune="git branch --merged \
                 | grep -v '>' \
