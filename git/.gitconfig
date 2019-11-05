@@ -10,6 +10,9 @@
     lg1-specific = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %an %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)%C(reset)%C(auto)%d%C(reset)'
     lg2-specific = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %an %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(auto)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)%C(reset)'
     lg3-specific = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %an <%ae> %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset) %C(bold cyan)(committed: %cD)%C(reset) %C(auto)%d%C(reset)%n''          %C(white)%s%C(reset)%n''          %C(dim white)%C(reset) %C(dim white)(committer: %cn <%ce>)%C(reset)'
+    track = "!git branch --set-upstream-to=origin/`git symbolic-ref --short HEAD`"
+[core]
+	editor = 'vim'
 [push]
 	followTags = true
 [diff]
