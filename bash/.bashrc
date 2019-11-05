@@ -96,3 +96,8 @@ export NVM_DIR="$HOME/.nvm"
 if [ -x "$(command -v go)" ]; then
   PATH=$PATH:$HOME/go/bin
 fi
+
+if [ -f "${HOME}/.local/bin/aws" ]; then
+  export PATH=$PATH:$HOME/.local/bin/aws
+fi
+
