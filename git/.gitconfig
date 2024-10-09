@@ -26,6 +26,7 @@
         helper = cache --timeout 1800
 [push]
         followTags = true
+	autoSetupRemote = true
 [alias]
         lg = !"git lg1-specific --all"
         lg1 = !"git lg1-specific --all"
