@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: git release [ref] [--major|--minor|--fix] [-y] [-h]
+
+Creates an annotated semver tag and pushes it to origin.
+
+Arguments:
+  ref         Any valid git reference: a branch name, a commit hash, a tag, etc.
+              If omitted, defaults to origin/main.
+
+Options:
+  --major     Bump the major version (skip interactive menu)
+  --minor     Bump the minor version (skip interactive menu)
+  --fix       Bump the fix/patch version (skip interactive menu)
+  -y          Skip confirmation prompt
+  -h          Show this help message
+
+Examples:
+  git release                        Tag origin/main, interactive menu
+  git release feature/my-fix         Tag a branch, interactive menu
+  git release a1b2c3d                Tag a specific commit, interactive menu
+  git release --minor                Bump minor on origin/main, confirm only
+  git release feature/my-fix --fix   Bump fix on a branch, confirm only
+  git release --fix -y               Bump fix on origin/main, no confirmation
+EOF
+}
+
+# Parse arguments.
+BUMP_FLAG=""
+AUTO_CONFIRM=false
+POSITIONAL=""
+for arg in "$@"; do
+    case "$arg" in
+        --major) BUMP_FLAG="M" ;;
+        --minor) BUMP_FLAG="m" ;;
+        --fix)   BUMP_FLAG="f" ;;
+        -y)      AUTO_CONFIRM=true ;;
+        -h) usage; exit 0 ;;
+        *)       POSITIONAL="$arg" ;;
+    esac
+done
+
+BOLD='\033[1m'
+BOLD_CYAN='\033[1;36m'
+BOLD_BYELLOW='\033[1;93m'
+DYELLOW='\033[0;33m'
+RED='\033[0;31m'
+RESET='\033[0m'
+
+# Fetch the latest state from the remote.
+git fetch --tags --quiet
+
+# Resolve the target revision.
+TARGET_REF="${POSITIONAL:-origin/main}"
+TARGET_SHA=$(git rev-parse "$TARGET_REF" 2>/dev/null) || {
+    echo -e "${RED}ERROR: Could not resolve '$TARGET_REF'.${RESET}" >&2
+    exit 1
+}
+TARGET_SHORT=$(git rev-parse --short "$TARGET_SHA")
+
+echo -e "Target: ${BOLD_BYELLOW}${TARGET_REF}${RESET} (${BOLD_BYELLOW}${TARGET_SHORT}${RESET})"
+
+# Warn if the current branch differs from the target.
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
+# Strip "origin/" prefix for comparison if targeting a remote branch.
+TARGET_BRANCH="${TARGET_REF#origin/}"
+if [ "$CURRENT_BRANCH" != "$TARGET_BRANCH" ]; then
+    echo -e "${DYELLOW}WARNING: You are on '$CURRENT_BRANCH', not '$TARGET_BRANCH'.${RESET}"
+fi
+echo ""
+
+# Show recent history leading to the target, highlighting the target commit.
+echo "Recent commits:"
+HL=$'\033[1;30;48;5;220m'
+HL_OFF=$'\033[0m'
+git log --oneline --graph --decorate --color=always -5 "$TARGET_SHA" \
+    | while IFS= read -r line; do
+        if echo "$line" | grep -q "$TARGET_SHORT"; then
+            printf '► %s\n' "$(echo "$line" | sed "s/${TARGET_SHORT}/${HL}${TARGET_SHORT}${HL_OFF}/")"
+        else
+            printf '  %s\n' "$line"
+        fi
+    done
+echo ""
+
+# Find the latest semver tag reachable from the target.
+LATEST_TAG=$(git tag --list --merged "$TARGET_SHA" --sort=-v:refname \
+    | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+    | head -1 || true)
+
+if [ -z "$LATEST_TAG" ]; then
+    echo -e "No existing semver tags found. Starting from ${BOLD_CYAN}0.0.0${RESET}."
+    LATEST_TAG="0.0.0"
+fi
+
+MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+
+echo -e "Latest version: ${BOLD_CYAN}${LATEST_TAG}${RESET}"
+
+# ── Helper functions ─────────────────────────────────────────────────────────
+
+resolve_tag() {
+    case "$1" in
+        M) echo "$(( MAJOR + 1 )).0.0" ;;
+        m) echo "$MAJOR.$(( MINOR + 1 )).0" ;;
+        f) echo "$MAJOR.$MINOR.$(( PATCH + 1 ))" ;;
+    esac
+}
+
+show_menu() {
+    echo ""
+    echo "Bump type:"
+    echo -e "  M - Major  (${BOLD_CYAN}$(( MAJOR + 1 ))${RESET}.0.0)"
+    echo -e "  m - Minor  ($MAJOR.${BOLD_CYAN}$(( MINOR + 1 ))${RESET}.0)"
+    echo -e "  f - Fix    ($MAJOR.$MINOR.${BOLD_CYAN}$(( PATCH + 1 ))${RESET})"
+    echo ""
+}
+
+pick_version() {
+    while true; do
+        read -rp "Choose [M/m/f]: " CHOICE
+        case "$CHOICE" in
+            M|m|f) NEW_TAG=$(resolve_tag "$CHOICE"); return ;;
+            *) echo -e "${DYELLOW}Invalid choice '$CHOICE'. Expected M, m, or f.${RESET}" ;;
+        esac
+    done
+}
+
+# Returns 0 = confirmed, 1 = go back.
+confirm_tag() {
+    local MODE="$1"
+    while true; do
+        echo ""
+        local PROMPT
+        PROMPT="$(echo -e "Tag ${BOLD_CYAN}${NEW_TAG}${RESET} on ${BOLD_BYELLOW}${TARGET_SHORT}${RESET}?")"
+        if [ "$MODE" = "to_menu" ]; then
+            read -rp "$PROMPT [y/N/(b)ack] " CONFIRM
+        else
+            read -rp "$PROMPT [y/N] " CONFIRM
+        fi
+        case "$CONFIRM" in
+            y|Y) return 0 ;;
+            b|B) [ "$MODE" = "to_menu" ] && return 1
+                 echo -e "${DYELLOW}Invalid choice.${RESET}" ;;
+            n|N|"") echo "Aborted."; exit 0 ;;
+            *) echo -e "${DYELLOW}Invalid choice.${RESET}" ;;
+        esac
+    done
+}
+
+create_tag() {
+    echo ""
+    echo -e "Creating annotated tag ${BOLD_CYAN}${NEW_TAG}${RESET} on ${BOLD_BYELLOW}${TARGET_SHORT}${RESET}..."
+    git tag -a "$NEW_TAG" "$TARGET_SHA" -m "Release $NEW_TAG"
+    git push origin "$NEW_TAG"
+    echo -e "Done. Pushed tag ${BOLD_CYAN}${NEW_TAG}${RESET}."
+}
+
+# ── State machine ────────────────────────────────────────────────────────────
+
+if [ -n "$BUMP_FLAG" ]; then
+    NEW_TAG=$(resolve_tag "$BUMP_FLAG")
+    if ! $AUTO_CONFIRM; then
+        confirm_tag "no_back"
+    fi
+    create_tag
+else
+    STATE="menu"
+    while true; do
+        case "$STATE" in
+            menu)
+                show_menu
+                pick_version
+                STATE="confirm"
+                ;;
+            confirm)
+                confirm_tag "to_menu" && RESULT=0 || RESULT=$?
+                if [ "$RESULT" -eq 0 ]; then
+                    create_tag
+                    break
+                else
+                    STATE="menu"
+                fi
+                ;;
+        esac
+    done
+fi
